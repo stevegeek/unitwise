@@ -28,6 +28,6 @@ Gem::Specification.new do |gem|
   gem.add_development_dependency   'nokogiri',        '~> 1.13'
   gem.add_development_dependency   'pry',             '~> 0.14'
   gem.add_development_dependency   'minitest',        '~> 5.15'
-  gem.add_development_dependency   'rake',            '~> 11.2'
+  gem.add_development_dependency   'rake',            '~> 13.0'
   gem.add_development_dependency   'nori',            '~> 2.6'
 end

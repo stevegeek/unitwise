@@ -34,6 +34,17 @@ describe Unitwise::Measurement do
     it "must convert derived units to special units" do
       _(r.convert_to("Cel").value).must_almost_equal(0)
     end
+    it "must convert scaled special units using linear conversion" do
+      # Test for issue: Cel/100 (centi-celsius) should convert linearly to Cel
+      # 100 Cel/100 = 1 Cel, 150 Cel/100 = 1.5 Cel, etc.
+      _(Unitwise::Measurement.new(100, "Cel/100").convert_to("Cel").value).must_equal(1)
+      _(Unitwise::Measurement.new(150, "Cel/100").convert_to("Cel").value).must_equal(1.5)
+      _(Unitwise::Measurement.new(200, "Cel/100").convert_to("Cel").value).must_equal(2)
+      # Test reverse conversion
+      _(Unitwise::Measurement.new(1, "Cel").convert_to("Cel/100").value).must_equal(100)
+      _(Unitwise::Measurement.new(1.5, "Cel").convert_to("Cel/100").value).must_equal(150)
+      _(Unitwise::Measurement.new(2, "Cel").convert_to("Cel/100").value).must_equal(200)
+    end
     it "must convert to a unit of another measurement" do
       _(mph.convert_to(kmh).value).must_almost_equal(96.56064)
     end

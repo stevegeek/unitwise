@@ -159,11 +159,36 @@ module Unitwise
     # Determine value of the unit after conversion to another unit
     # @api private
     def converted_value(other_unit)
-      if other_unit.special?
+      # Check if both units involve the same special atoms (e.g., both involve Cel)
+      # In that case, use linear conversion instead of functional conversion
+      # Example: converting Cel/100 to Cel or Cel to Cel/100 should be linear
+      if shares_special_atoms?(other_unit) && (special? || other_unit.special?)
+        # Both involve same special atom with at least one being special
+        # Use linear conversion with linear scalars (no functional offset)
+        # This handles: Cel/100 <-> Cel, Cel <-> Cel/100
+        my_linear_scalar = value * unit.linear_scalar
+        other_linear_scalar = other_unit.linear_scalar
+        my_linear_scalar / other_linear_scalar
+      elsif other_unit.special?
+        # Target is special, source is not (or different special atoms)
+        # Use functional conversion
         other_unit.magnitude scalar
       else
+        # Standard linear conversion
         scalar / other_unit.scalar
       end
+    end
+
+    # Check if this measurement's unit shares special atoms with another unit
+    # @api private
+    def shares_special_atoms?(other_unit)
+      # Get special atoms from both units (filtering out nils)
+      my_special_atoms = atoms.compact.select { |a| a.respond_to?(:special?) && a.special? }.map(&:primary_code)
+      other_special_atoms = other_unit.atoms.compact.select { |a| a.respond_to?(:special?) && a.special? }.map(&:primary_code)
+
+      # Check if they share any special atoms
+      return false if my_special_atoms.empty? || other_special_atoms.empty?
+      !(my_special_atoms & other_special_atoms).empty?
     end
 
     # Add or subtract other unit

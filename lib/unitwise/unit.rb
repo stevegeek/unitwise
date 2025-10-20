@@ -87,8 +87,56 @@ module Unitwise
     # @return [Numeric] A scalar value on a linear scale
     # @api public
     def scalar(magnitude = 1)
+      if special?
+        # Special unit (single special term) - use standard functional conversion
+        terms.reduce(1) do |prod, term|
+          prod * term.scalar(magnitude)
+        end
+      else
+        # Non-special unit (composite or non-special single term)
+        # Special terms should use linear scale, not functional conversion
+        terms.reduce(1) do |prod, term|
+          if term.special?
+            # For special atoms in composite units, use linear scale (no offset)
+            # Example: Cel in "Cel/100" should use scale 1, not 274.15
+            atom_scale = term.atom.scale
+            if atom_scale.is_a?(Functional)
+              # Linear scale = value * base_unit.scalar
+              base_unit_scalar = Unit.new(atom_scale.unit.to_s).scalar
+              linear_value = atom_scale.value * base_unit_scalar
+              # Apply term's factor, prefix, and exponent
+              calculated = (term.factor * (term.prefix ? term.prefix.scalar : 1) * linear_value) ** term.exponent
+              prod * calculated
+            else
+              prod * term.scalar(magnitude)
+            end
+          else
+            prod * term.scalar(magnitude)
+          end
+        end
+      end
+    end
+
+    # Get a linear scalar value for this unit (without functional conversions).
+    # This is used when converting between units that share the same special atom.
+    # @return [Numeric] A linear scalar value
+    # @api public
+    def linear_scalar
       terms.reduce(1) do |prod, term|
-        prod * term.scalar(magnitude)
+        if term.special?
+          atom_scale = term.atom.scale
+          if atom_scale.is_a?(Functional)
+            # For special atoms, use linear scale (value * base_unit.scalar)
+            base_unit_scalar = Unit.new(atom_scale.unit.to_s).linear_scalar
+            linear_value = atom_scale.value * base_unit_scalar
+            calculated = (term.factor * (term.prefix ? term.prefix.scalar : 1) * linear_value) ** term.exponent
+            prod * calculated
+          else
+            prod * term.scalar(1)
+          end
+        else
+          prod * term.scalar(1)
+        end
       end
     end
 
